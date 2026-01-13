@@ -1,0 +1,33 @@
+app_name: YouTube Downloader
+app_description: Descargador de videos de YouTube para dispositivos móviles
+app_version: 1.0.0
+
+# Configuración de iOS
+ios_bundle_identifier: com.yourdomain.youtube_downloader
+ios_deployment_target: 12.0
+
+# Configuración de Android
+android_package_name: com.yourdomain.youtube_downloader
+android_min_sdk_version: 21
+android_target_sdk_version: 34
+
+# Configuración de compilación
+flutter_flavor: production
+
+# Permisos
+permissions_required:
+  - INTERNET
+  - READ_EXTERNAL_STORAGE
+  - WRITE_EXTERNAL_STORAGE
+
+# Características de la app
+features:
+  - download_manager
+  - http_client
+  - local_storage
+  - process_management
+
+# Configuración de logging
+logging:
+  level: info
+  enable_analytics: false

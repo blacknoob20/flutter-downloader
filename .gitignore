@@ -1,0 +1,131 @@
+# ============================================================================
+# FLUTTER & DART
+# ============================================================================
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+.pub-cache/
+.pub/
+/build/
+pubspec.lock
+
+# ============================================================================
+# IDE & EDITOR
+# ============================================================================
+.idea/
+.vscode/
+*.iml
+*.ipr
+*.iws
+.gradle
+.project
+.workspace.xml
+.classpath
+.settings/
+.swiftpm/
+.DS_Store
+.atom/
+
+# ============================================================================
+# iOS & macOS
+# ============================================================================
+**/ios/Flutter/.last_build_id
+**/ios/Flutter/Flutter.podspec
+**/ios/Flutter/Flutter.framework
+**/ios/Flutter/flutter_export_environment.sh
+**/ios/Flutter/Generated.xcconfig
+**/ios/Flutter/ephemeral/
+**/ios/ServiceDefinitions.json
+**/ios/Runner/GeneratedPluginRegistrant.*
+**/ios/Runner.xcworkspace/xcshareddata/
+**/ios/Pods/
+**/ios/Podfile.lock
+**/ios/.symlinks/
+**/ios/.xcworkspace/
+**/macos/Flutter/GeneratedPluginRegistrant.swift
+**/macos/Flutter/ephemeral/
+**/macos/Flutter/Flutter-Debug.xcconfig
+**/macos/Flutter/Flutter-Release.xcconfig
+
+# ============================================================================
+# ANDROID
+# ============================================================================
+**/android/.gradle/
+**/android/.idea/
+**/android/build/
+**/android/captures/
+**/android/local.properties
+**/android/gradle.properties
+**/android/gradlew
+**/android/gradlew.bat
+**/android/key.properties
+**/android/**/GeneratedPluginRegistrant.java
+**/android/app/debug
+**/android/app/profile
+**/android/app/release
+
+# ============================================================================
+# CREDENTIALS & SECRETS
+# ============================================================================
+.env
+.env.*
+!.env.example
+*.jks
+*.keystore
+*.p8
+*.p12
+*.key
+*.mobileprovision
+*.orig.*
+google-services.json
+GoogleService-Info.plist
+
+# ============================================================================
+# BUILD ARTIFACTS & COMPILED FILES
+# ============================================================================
+*.class
+*.o
+*.so
+*.a
+*.apk
+*.aab
+*.ipa
+*.app
+*.exe
+*.dll
+*.dylib
+
+# ============================================================================
+# LOGS & TEMPORARY FILES
+# ============================================================================
+*.log
+*.pyc
+*.swp
+*.swo
+*~
+.build/
+.buildlog/
+.coverage/
+lcov.info
+.history
+.svn/
+migrate_working_dir/
+coverage/
+
+# ============================================================================
+# FVM (Flutter Version Management)
+# ============================================================================
+.fvm/
+.fvm/fvm_config.json
+
+# ============================================================================
+# MISC
+# ============================================================================
+Thumbs.db
+.AppleDouble
+.LSOverride
+.DS_Store
+.env
+.env.*
+!.env.example
