@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../models/video_model.dart';
 import '../viewmodels/download_viewmodel.dart';
 import '../widgets/format_selection_card.dart';
+import '../widgets/video_info_card.dart';
 import 'download_screen.dart';
 
 class FormatSelectionScreen extends StatefulWidget {
@@ -63,9 +64,7 @@ class _FormatSelectionScreenState extends State<FormatSelectionScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-    final textTheme = theme.textTheme;
+    Theme.of(context);
 
     return Scaffold(
       appBar: AppBar(title: const Text('Seleccionar formato'), elevation: 0),
@@ -74,62 +73,7 @@ class _FormatSelectionScreenState extends State<FormatSelectionScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Video Info
-            Container(
-              color: colorScheme.surfaceContainerHighest,
-              padding: const EdgeInsets.all(12),
-              child: Row(
-                children: [
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(8),
-                    child: Image.network(
-                      widget.video.thumbnailUrl,
-                      width: 80,
-                      height: 60,
-                      fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) {
-                        return Container(
-                          width: 80,
-                          height: 60,
-                          color: colorScheme.surface,
-                          child: Icon(
-                            Icons.video_library,
-                            color: colorScheme.onSurface,
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          widget.video.title,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: (textTheme.titleSmall ?? const TextStyle())
-                              .copyWith(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 13,
-                            color: colorScheme.onSurface,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          widget.video.uploader,
-                          style: (textTheme.bodySmall ?? const TextStyle())
-                              .copyWith(
-                            color: colorScheme.onSurfaceVariant,
-                            fontSize: 11,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
+            VideoInfoCard(video: widget.video),
 
             // Formats List
             Padding(
