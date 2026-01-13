@@ -54,6 +54,7 @@ class _FormatSelectionScreenState extends State<FormatSelectionScreen> {
       extension: _selectedFormat.extension,
     )
         .then((_) {
+      if (!mounted) return;
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(builder: (context) => const DownloadScreen()),
       );
@@ -62,6 +63,10 @@ class _FormatSelectionScreenState extends State<FormatSelectionScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final textTheme = theme.textTheme;
+
     return Scaffold(
       appBar: AppBar(title: const Text('Seleccionar formato'), elevation: 0),
       body: SafeArea(
@@ -70,7 +75,7 @@ class _FormatSelectionScreenState extends State<FormatSelectionScreen> {
           children: [
             // Video Info
             Container(
-              color: Colors.grey[100],
+              color: colorScheme.surfaceContainerHighest,
               padding: const EdgeInsets.all(12),
               child: Row(
                 children: [
@@ -85,8 +90,11 @@ class _FormatSelectionScreenState extends State<FormatSelectionScreen> {
                         return Container(
                           width: 80,
                           height: 60,
-                          color: Colors.grey[300],
-                          child: const Icon(Icons.video_library),
+                          color: colorScheme.surface,
+                          child: Icon(
+                            Icons.video_library,
+                            color: colorScheme.onSurface,
+                          ),
                         );
                       },
                     ),
@@ -100,16 +108,19 @@ class _FormatSelectionScreenState extends State<FormatSelectionScreen> {
                           widget.video.title,
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
+                          style: (textTheme.titleSmall ?? const TextStyle())
+                              .copyWith(
                             fontWeight: FontWeight.bold,
                             fontSize: 13,
+                            color: colorScheme.onSurface,
                           ),
                         ),
                         const SizedBox(height: 4),
                         Text(
                           widget.video.uploader,
-                          style: TextStyle(
-                            color: Colors.grey[600],
+                          style: (textTheme.bodySmall ?? const TextStyle())
+                              .copyWith(
+                            color: colorScheme.onSurfaceVariant,
                             fontSize: 11,
                           ),
                         ),
