@@ -79,10 +79,9 @@ class YouTubeService {
     for (final stream in manifest.muxed) {
       formats.add(Format(
         id: stream.tag.toString(),
-        formatName:
-            '${stream.videoCodec.toUpperCase()} ${stream.videoQualityLabel}',
+        formatName: '${stream.videoCodec.toUpperCase()} ${stream.qualityLabel}',
         extension: stream.container.name,
-        resolution: stream.videoQualityLabel,
+        resolution: stream.qualityLabel,
         filesize: stream.size.totalBytes,
         fps: '${stream.framerate.framesPerSecond}',
         hasAudio: true,

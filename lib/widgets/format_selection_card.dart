@@ -15,6 +15,10 @@ class FormatSelectionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final textTheme = theme.textTheme;
+
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       child: InkWell(
@@ -26,6 +30,7 @@ class FormatSelectionCard extends StatelessWidget {
               Radio<bool>(
                 value: true,
                 groupValue: isSelected,
+                activeColor: colorScheme.primary,
                 onChanged: (_) => onTap(),
               ),
               const SizedBox(width: 12),
@@ -39,7 +44,9 @@ class FormatSelectionCard extends StatelessWidget {
                           Chip(
                             label: const Text('Video'),
                             visualDensity: VisualDensity.compact,
-                            backgroundColor: Colors.blue[100],
+                            backgroundColor: colorScheme.primaryContainer,
+                            labelStyle: TextStyle(
+                                color: colorScheme.onPrimaryContainer),
                           ),
                         if (format.hasVideo && format.hasAudio)
                           const SizedBox(width: 8),
@@ -47,14 +54,17 @@ class FormatSelectionCard extends StatelessWidget {
                           Chip(
                             label: const Text('Audio'),
                             visualDensity: VisualDensity.compact,
-                            backgroundColor: Colors.green[100],
+                            backgroundColor: colorScheme.secondaryContainer,
+                            labelStyle: TextStyle(
+                                color: colorScheme.onSecondaryContainer),
                           ),
                       ],
                     ),
                     const SizedBox(height: 8),
                     Text(
                       format.displayName,
-                      style: const TextStyle(
+                      style:
+                          (textTheme.titleMedium ?? const TextStyle()).copyWith(
                         fontWeight: FontWeight.bold,
                         fontSize: 14,
                       ),
@@ -65,15 +75,17 @@ class FormatSelectionCard extends StatelessWidget {
                       children: [
                         Text(
                           'Tamaño: ${format.fileSizeDisplay}',
-                          style: TextStyle(
-                            color: Colors.grey[600],
+                          style: (textTheme.bodySmall ?? const TextStyle())
+                              .copyWith(
+                            color: colorScheme.onSurfaceVariant,
                             fontSize: 12,
                           ),
                         ),
                         Text(
                           'FPS: ${format.fps}',
-                          style: TextStyle(
-                            color: Colors.grey[600],
+                          style: (textTheme.bodySmall ?? const TextStyle())
+                              .copyWith(
+                            color: colorScheme.onSurfaceVariant,
                             fontSize: 12,
                           ),
                         ),
