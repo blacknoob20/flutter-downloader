@@ -1,9 +1,7 @@
 import 'dart:io';
-import 'dart:convert';
 import 'package:dio/dio.dart';
 import 'package:logger/logger.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:process/process.dart';
 import 'package:uuid/uuid.dart';
 import '../models/download_model.dart';
 
@@ -14,16 +12,19 @@ enum ContentType {
 
 class DownloadService {
   final Logger _logger = Logger();
+  final Dio _dio;
   final Map<String, CancelToken> _cancelTokens = {};
 
-  DownloadService({Dio? dio, ProcessManager? processManager});
+  DownloadService({Dio? dio}) : _dio = dio ?? Dio();
 
-  /// Descarga un video usando yt-dlp (o genera simulación si yt-dlp no está disponible)
+  /// Descarga un video usando la URL directa del stream
   Future<Download> downloadVideo({
     required String videoUrl,
     required String videoTitle,
     required String formatId,
     required String formatName,
+    required String? directUrl,
+    required String extension,
     required Function(Download) onProgress,
     required Function(Download) onComplete,
     required Function(Download, String) onError,
@@ -40,56 +41,72 @@ class DownloadService {
     try {
       _logger.i('Iniciando descarga: $videoTitle (Formato: $formatName)');
 
+      if (directUrl == null || directUrl.isEmpty) {
+        throw Exception('URL de descarga no disponible');
+      }
+
       // Determinar tipo de contenido
       final contentType = _getContentType(formatId);
       final outputDir = await _getOutputDirectory(contentType);
 
       download.status = DownloadStatus.downloading;
-      _cancelTokens[downloadId] = CancelToken();
+      final cancelToken = CancelToken();
+      _cancelTokens[downloadId] = cancelToken;
 
-      // Intentar descargar con yt-dlp
-      final result = await _downloadWithYtDlp(
-        videoUrl: videoUrl,
-        videoTitle: videoTitle,
-        formatId: formatId,
-        outputDir: outputDir,
-        contentType: contentType,
-        onProgress: (progress) {
-          download.progress = progress;
-          onProgress(download);
+      // Descargar directamente usando Dio
+      final fileName =
+          '${videoTitle.replaceAll(RegExp(r'[^a-zA-Z0-9_\-\s]'), '_')}.$extension';
+      final filePath = '$outputDir/$fileName';
+
+      _logger.i('Descargando desde: $directUrl');
+      _logger.i('Guardando en: $filePath');
+
+      await _dio.download(
+        directUrl,
+        filePath,
+        cancelToken: cancelToken,
+        onReceiveProgress: (received, total) {
+          if (total > 0) {
+            final progress = received / total;
+            download.progress = progress;
+            download.downloadedBytes = received;
+            download.totalBytes = total;
+            download.downloadSpeed =
+                _calculateSpeed(received, download.startedAt);
+            download.estimatedTimeRemaining =
+                _calculateETA(received, total, download.downloadSpeed);
+            onProgress(download);
+          }
         },
       );
 
-      if (result != null) {
-        // Descarga exitosa con yt-dlp
-        final file = File(result);
-        final fileSize = await file.length();
+      final file = File(filePath);
+      final fileSize = await file.length();
 
-        download.status = DownloadStatus.completed;
-        download.progress = 1.0;
-        download.completedAt = DateTime.now();
-        download.filePath = result;
-        download.downloadedBytes = fileSize;
-        download.totalBytes = fileSize;
+      download.status = DownloadStatus.completed;
+      download.progress = 1.0;
+      download.completedAt = DateTime.now();
+      download.filePath = filePath;
+      download.downloadedBytes = fileSize;
+      download.totalBytes = fileSize;
 
-        _logger.i('✅ Descarga completada: $videoTitle');
-        _logger.i('📁 Ubicación: $result');
-        _logger.i('📦 Tamaño: ${_formatBytes(fileSize)}');
-        onComplete(download);
+      _logger.i('✅ Descarga completada: $videoTitle');
+      _logger.i('📁 Ubicación: $filePath');
+      _logger.i('📦 Tamaño: ${_formatBytes(fileSize)}');
+      onComplete(download);
 
-        return download;
+      return download;
+    } on DioException catch (e) {
+      if (CancelToken.isCancel(e)) {
+        _logger.i('Descarga cancelada: $videoTitle');
+        download.status = DownloadStatus.cancelled;
       } else {
-        // Fallback: generar archivo de prueba
-        _logger.w('⚠️  yt-dlp no disponible. Generando archivo de prueba...');
-        return await _downloadFallback(
-          videoTitle: videoTitle,
-          formatId: formatId,
-          outputDir: outputDir,
-          download: download,
-          onProgress: onProgress,
-          onComplete: onComplete,
-        );
+        _logger.e('❌ Error en la descarga', error: e);
+        download.status = DownloadStatus.failed;
+        download.errorMessage = e.message ?? e.toString();
+        onError(download, e.message ?? e.toString());
       }
+      return download;
     } catch (e) {
       _logger.e('❌ Error en la descarga', error: e);
       download.status = DownloadStatus.failed;
@@ -101,206 +118,18 @@ class DownloadService {
     }
   }
 
-  /// Intenta descargar con yt-dlp
-  Future<String?> _downloadWithYtDlp({
-    required String videoUrl,
-    required String videoTitle,
-    required String formatId,
-    required String outputDir,
-    required ContentType contentType,
-    required Function(double) onProgress,
-  }) async {
-    try {
-      // Construir argumentos para yt-dlp
-      final fileName =
-          '${videoTitle.replaceAll(RegExp(r'[^a-zA-Z0-9_\-\s]'), '_')}.%(ext)s';
-      final outputTemplate = '$outputDir/$fileName';
-
-      final args = [
-        '-f',
-        formatId,
-        '-o',
-        outputTemplate,
-        '--no-warnings',
-        '--quiet',
-      ];
-
-      if (contentType == ContentType.audio) {
-        args.addAll([
-          '-x',
-          '--audio-format',
-          'mp3',
-          '--audio-quality',
-          '192',
-        ]);
-      }
-
-      args.add(videoUrl);
-
-      _logger.i('Ejecutando yt-dlp...');
-
-      // Intentar ejecutar yt-dlp
-      final process = await Process.start('yt-dlp', args);
-
-      // Monitorear progreso desde stderr
-      process.stderr.transform(utf8.decoder).listen((data) {
-        _logger.i('yt-dlp: $data');
-        // Intentar extraer progreso
-        final progressRegex = RegExp(r'(\d+\.?\d*?)%');
-        final match = progressRegex.firstMatch(data);
-        if (match != null) {
-          final percentStr = match.group(1) ?? '0';
-          final percent = double.tryParse(percentStr) ?? 0;
-          onProgress(percent / 100);
-        }
-      });
-
-      process.stdout.transform(utf8.decoder).listen((data) {
-        _logger.i('yt-dlp stdout: $data');
-      });
-
-      final exitCode = await process.exitCode;
-
-      if (exitCode != 0) {
-        _logger.w('yt-dlp falló con código $exitCode');
-        return null;
-      }
-
-      // Buscar archivo descargado
-      final filePath = await _findDownloadedFile(outputDir, videoTitle);
-      return filePath;
-    } catch (e) {
-      _logger.w('No se pudo ejecutar yt-dlp: $e');
-      return null;
-    }
+  /// Calcula la velocidad de descarga en bytes por segundo
+  double _calculateSpeed(int downloaded, DateTime startTime) {
+    final elapsedSeconds = DateTime.now().difference(startTime).inSeconds;
+    if (elapsedSeconds == 0) return 0;
+    return downloaded / elapsedSeconds;
   }
 
-  /// Descarga fallback: genera archivo de prueba
-  Future<Download> _downloadFallback({
-    required String videoTitle,
-    required String formatId,
-    required String outputDir,
-    required Download download,
-    required Function(Download) onProgress,
-    required Function(Download) onComplete,
-  }) async {
-    try {
-      // Simular descarga con progreso
-      for (int i = 0; i <= 100; i += 10) {
-        download.progress = i / 100;
-        download.downloadedBytes = (50000000 * download.progress).toInt();
-        onProgress(download);
-        await Future.delayed(const Duration(milliseconds: 300));
-      }
-
-      // Crear archivo con contenido válido
-      final fileName =
-          '${videoTitle.replaceAll(RegExp(r'[^a-zA-Z0-9_\-\s]'), '_')}.${_getExtension(formatId)}';
-      final filePath = '$outputDir/$fileName';
-      final file = File(filePath);
-      await file.create(recursive: true);
-
-      // Generar contenido válido
-      final fileContent =
-          _generateValidFileContent(_getExtension(formatId), 50000000);
-      await file.writeAsBytes(fileContent);
-
-      download.status = DownloadStatus.completed;
-      download.progress = 1.0;
-      download.completedAt = DateTime.now();
-      download.filePath = filePath;
-      download.downloadedBytes = 50000000;
-      download.totalBytes = 50000000;
-
-      _logger.i('✅ Archivo de prueba creado: $videoTitle');
-      _logger.i('📁 Ubicación: $filePath');
-      _logger.w('📝 NOTA: Este es un archivo de prueba (yt-dlp no disponible)');
-      onComplete(download);
-
-      return download;
-    } catch (e) {
-      _logger.e('Error en descarga fallback', error: e);
-      download.status = DownloadStatus.failed;
-      download.errorMessage = e.toString();
-      return download;
-    }
-  }
-
-  /// Genera contenido válido para archivos MP4 y MP3
-  List<int> _generateValidFileContent(String extension, int targetSize) {
-    List<int> content = [];
-
-    if (extension == 'mp4') {
-      // Cabecera mínima válida de MP4
-      content = [
-        0x00, 0x00, 0x00, 0x20, 0x66, 0x74, 0x79, 0x70, // ftyp box
-        0x69, 0x73, 0x6f, 0x6d, 0x00, 0x00, 0x00, 0x00,
-        0x69, 0x73, 0x6f, 0x6d, 0x69, 0x73, 0x6f, 0x32,
-        0x61, 0x76, 0x63, 0x31, 0x6d, 0x70, 0x34, 0x31,
-      ];
-    } else if (extension == 'mp3') {
-      // Cabecera ID3v2 mínima válida para MP3
-      content = [
-        0x49, 0x44, 0x33, // "ID3"
-        0x04, 0x00, // Version 2.4.0
-        0x00, // Flags
-        0x00, 0x00, 0x00, 0x00, // Size
-      ];
-    } else if (extension == 'm4a') {
-      // Similar a MP4 pero para audio
-      content = [
-        0x00, 0x00, 0x00, 0x20, 0x66, 0x74, 0x79, 0x70, // ftyp box
-        0x4d, 0x34, 0x41, 0x20, 0x00, 0x00, 0x00, 0x00,
-        0x4d, 0x34, 0x41, 0x20, 0x69, 0x73, 0x6f, 0x6d,
-        0x69, 0x73, 0x6f, 0x32, 0x61, 0x61, 0x63, 0x31,
-      ];
-    }
-
-    // Rellenar con datos válidos hasta el tamaño deseado
-    if (content.length < targetSize) {
-      final remainingSize = targetSize - content.length;
-      // Generar datos pseudo-aleatorios pero válidos
-      content.addAll(
-        List<int>.generate(remainingSize, (i) => (i ^ (i >> 8)) & 0xFF),
-      );
-    }
-
-    return content;
-  }
-
-  /// Encuentra el archivo descargado
-  Future<String?> _findDownloadedFile(
-      String directory, String videoTitle) async {
-    try {
-      final dir = Directory(directory);
-      if (!await dir.exists()) {
-        return null;
-      }
-
-      final files = dir.listSync().whereType<File>();
-
-      // Buscar archivo que contiene el título
-      for (var file in files) {
-        final fileName = file.path.split('/').last;
-        if (fileName.contains(
-            videoTitle.replaceAll(RegExp(r'[^a-zA-Z0-9_\-\s]'), '_'))) {
-          return file.path;
-        }
-      }
-
-      // Si no encuentra exacto, retornar el archivo más reciente
-      if (files.isNotEmpty) {
-        final sorted = files.toList();
-        sorted.sort(
-            (a, b) => b.statSync().modified.compareTo(a.statSync().modified));
-        return sorted.first.path;
-      }
-
-      return null;
-    } catch (e) {
-      _logger.e('Error buscando archivo descargado', error: e);
-      return null;
-    }
+  /// Calcula el tiempo estimado restante en segundos
+  int _calculateETA(int downloaded, int total, double speed) {
+    if (speed == 0) return 0;
+    final remaining = total - downloaded;
+    return (remaining / speed).ceil();
   }
 
   /// Formatea bytes a formato legible
@@ -322,26 +151,6 @@ class DownloadService {
     }
     // El resto son videos
     return ContentType.video;
-  }
-
-  /// Obtiene la extensión basada en el formato
-  String _getExtension(String formatId) {
-    switch (formatId) {
-      case '140':
-      case '251':
-      case '250':
-      case '249':
-      case '139':
-        return 'mp3';
-      case '255':
-        return 'm4a';
-      case '137':
-      case '18':
-      case '22':
-        return 'mp4';
-      default:
-        return 'mp4';
-    }
   }
 
   /// Obtiene el directorio de salida según el tipo de contenido

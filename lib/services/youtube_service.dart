@@ -1,8 +1,10 @@
 import 'package:logger/logger.dart';
+import 'package:youtube_explode_dart/youtube_explode_dart.dart' as yt;
 import '../models/video_model.dart';
 
 class YouTubeService {
   final Logger _logger = Logger();
+  final yt.YoutubeExplode _ytClient = yt.YoutubeExplode();
 
   YouTubeService();
 
@@ -20,8 +22,7 @@ class YouTubeService {
     }
   }
 
-  /// Obtiene información del video de YouTube
-  /// Usa una aproximación simulada basada en la metadata disponible
+  /// Obtiene información del video de YouTube usando youtube_explode_dart
   Future<Video> getVideoInfo(String url) async {
     try {
       _logger.i('Obteniendo información del video: $url');
@@ -31,18 +32,24 @@ class YouTubeService {
         throw Exception('URL de YouTube inválida');
       }
 
-      // Simulamos la obtención de información del video
-      // En una app real, usarías YouTube API o yt-dlp-web
+      // Obtener información real del video usando youtube_explode_dart
+      final ytVideo = await _ytClient.videos.get(videoId);
+      final manifest =
+          await _ytClient.videos.streamsClient.getManifest(videoId);
+
+      // Obtener formatos disponibles
+      final formats = _extractFormats(manifest);
+
       final video = Video(
         id: videoId,
-        title: 'Video de YouTube',
+        title: ytVideo.title,
         url: url,
-        thumbnailUrl: 'https://img.youtube.com/vi/$videoId/0.jpg',
-        duration: 600,
-        uploader: 'Autor',
-        uploadDate: DateTime.now(),
-        viewCount: 0,
-        availableFormats: _getMockFormats(),
+        thumbnailUrl: ytVideo.thumbnails.mediumResUrl,
+        duration: ytVideo.duration?.inSeconds ?? 0,
+        uploader: ytVideo.author,
+        uploadDate: ytVideo.uploadDate ?? DateTime.now(),
+        viewCount: ytVideo.engagement.viewCount,
+        availableFormats: formats,
       );
 
       _logger.i('Video obtenido: ${video.title}');
@@ -64,105 +71,105 @@ class YouTubeService {
     }
   }
 
-  /// Simula formatos disponibles para demostración
-  List<Format> _getMockFormats() {
-    return [
-      Format(
-        id: '18',
-        formatName: 'MP4 360p',
-        extension: 'mp4',
-        resolution: '360p',
-        filesize: 50000000,
-        fps: '30',
+  /// Extrae formatos de los streams de YouTube
+  List<Format> _extractFormats(yt.StreamManifest manifest) {
+    final formats = <Format>[];
+
+    // Formatos muxed (video + audio)
+    for (final stream in manifest.muxed) {
+      formats.add(Format(
+        id: stream.tag.toString(),
+        formatName:
+            '${stream.videoCodec.toUpperCase()} ${stream.videoQualityLabel}',
+        extension: stream.container.name,
+        resolution: stream.videoQualityLabel,
+        filesize: stream.size.totalBytes,
+        fps: '${stream.framerate.framesPerSecond}',
         hasAudio: true,
         hasVideo: true,
-      ),
-      Format(
-        id: '22',
-        formatName: 'MP4 720p',
-        extension: 'mp4',
-        resolution: '720p',
-        filesize: 150000000,
-        fps: '30',
-        hasAudio: true,
-        hasVideo: true,
-      ),
-      Format(
-        id: '137',
-        formatName: 'MP4 1080p',
-        extension: 'mp4',
-        resolution: '1080p',
-        filesize: 300000000,
-        fps: '30',
+        downloadUrl: stream.url.toString(),
+      ));
+    }
+
+    // Formatos solo video
+    for (final stream in manifest.videoOnly) {
+      formats.add(Format(
+        id: stream.tag.toString(),
+        formatName:
+            '${stream.videoCodec.toUpperCase()} ${stream.videoQualityLabel} (video only)',
+        extension: stream.container.name,
+        resolution: stream.videoQualityLabel,
+        filesize: stream.size.totalBytes,
+        fps: '${stream.framerate.framesPerSecond}',
         hasAudio: false,
         hasVideo: true,
-      ),
-      Format(
-        id: '140',
-        formatName: 'MP3 Audio',
-        extension: 'mp3',
+        downloadUrl: stream.url.toString(),
+      ));
+    }
+
+    // Formatos solo audio
+    for (final stream in manifest.audioOnly) {
+      formats.add(Format(
+        id: stream.tag.toString(),
+        formatName:
+            'Audio Solo ${stream.audioCodec.toUpperCase()} ${stream.bitrate}',
+        extension: stream.container.name,
         resolution: 'audio',
-        filesize: 8000000,
+        filesize: stream.size.totalBytes,
         fps: 'N/A',
         hasAudio: true,
         hasVideo: false,
-      ),
-      Format(
-        id: '251',
-        formatName: 'WEBM Audio',
-        extension: 'webm',
-        resolution: 'audio',
-        filesize: 10000000,
-        fps: 'N/A',
-        hasAudio: true,
-        hasVideo: false,
-      ),
-    ];
+        downloadUrl: stream.url.toString(),
+      ));
+    }
+
+    return formats;
   }
 
-  /// Filtra los formatos recomendados (similar a la app en Zig)
-  /// Devuelve: Mejores MP4/MKV y opciones capped 1080p/720p/480p/360p + audio solo
+  /// Filtra los formatos recomendados
+  /// Devuelve SOLO formatos con video + audio, más una opción de solo audio
   List<Format> _filterRecommendedFormats(List<Format> formats) {
     final recommended = <Format>[];
     final seen = <String>{};
 
-    // 1. Mejor formato con video + audio
-    final best = formats.where((f) => f.hasVideo && f.hasAudio).toList();
-    if (best.isNotEmpty) {
-      best.sort((a, b) => b.filesize.compareTo(a.filesize));
-      if (best.first.filesize > 0) {
-        recommended.add(best.first);
-        seen.add('${best.first.resolution}-${best.first.extension}');
-      }
+    // 1. SOLO formatos muxed (video + audio juntos)
+    final muxedFormats =
+        formats.where((f) => f.hasVideo && f.hasAudio).toList();
+
+    if (muxedFormats.isEmpty) {
+      // Si no hay formatos muxed, devolver todos los que tengan video + audio
+      return muxedFormats;
     }
 
-    // 2. Formatos capped por resolución
-    for (final resolution in ['1080p', '720p', '480p', '360p']) {
-      final filtered = formats
-          .where(
-            (f) =>
-                f.hasVideo && f.hasAudio && f.resolution.contains(resolution),
-          )
-          .toList();
+    // Agrupar por resolución
+    final resolutions = ['1080p', '720p', '480p', '360p', '240p'];
+
+    for (final resolution in resolutions) {
+      final filtered =
+          muxedFormats.where((f) => f.resolution.contains(resolution)).toList();
 
       if (filtered.isNotEmpty) {
+        // Ordenar por tamaño descendente y tomar el mejor
         filtered.sort((a, b) => b.filesize.compareTo(a.filesize));
-        final key = '$resolution-${filtered.first.extension}';
+        final best = filtered.first;
+
+        final key = '$resolution-${best.extension}';
         if (!seen.contains(key)) {
-          recommended.add(filtered.first);
+          recommended.add(best);
           seen.add(key);
         }
       }
     }
 
-    // 3. Audio solo
+    // 2. Agregar opción de SOLO AUDIO (mejor stream de audio disponible)
     final audioOnly = formats.where((f) => f.hasAudio && !f.hasVideo).toList();
     if (audioOnly.isNotEmpty) {
       audioOnly.sort((a, b) => b.filesize.compareTo(a.filesize));
-      recommended.add(audioOnly.first);
+      final bestAudio = audioOnly.first;
+      recommended.add(bestAudio);
     }
 
-    return recommended;
+    return recommended.isEmpty ? muxedFormats : recommended;
   }
 
   /// Extrae el ID del video de una URL de YouTube

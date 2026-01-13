@@ -52,6 +52,8 @@ class DownloadViewModel extends ChangeNotifier {
     required String videoTitle,
     required String formatId,
     required String formatName,
+    required String? directUrl,
+    required String extension,
   }) async {
     _isLoading = true;
     _errorMessage = null;
@@ -63,6 +65,8 @@ class DownloadViewModel extends ChangeNotifier {
         videoTitle: videoTitle,
         formatId: formatId,
         formatName: formatName,
+        directUrl: directUrl,
+        extension: extension,
         onProgress: (download) {
           _updateDownload(download);
         },

@@ -63,6 +63,7 @@ class Format {
   final String fps; // frames per second
   final bool hasAudio;
   final bool hasVideo;
+  final String? downloadUrl; // URL directa para descargar
 
   Format({
     required this.id,
@@ -73,6 +74,7 @@ class Format {
     required this.fps,
     required this.hasAudio,
     required this.hasVideo,
+    this.downloadUrl,
   });
 
   factory Format.fromJson(Map<String, dynamic> json) {
@@ -85,6 +87,7 @@ class Format {
       fps: (json['fps'] as num?)?.toString() ?? 'N/A',
       hasAudio: (json['acodec'] as String? ?? '') != 'none',
       hasVideo: (json['vcodec'] as String? ?? '') != 'none',
+      downloadUrl: json['download_url'] as String?,
     );
   }
 
@@ -98,6 +101,7 @@ class Format {
       'fps': fps,
       'acodec': hasAudio ? 'aac' : 'none',
       'vcodec': hasVideo ? 'h264' : 'none',
+      'download_url': downloadUrl,
     };
   }
 

@@ -50,6 +50,8 @@ class _FormatSelectionScreenState extends State<FormatSelectionScreen> {
       videoTitle: widget.video.title,
       formatId: _selectedFormat.id,
       formatName: _selectedFormat.displayName,
+      directUrl: _selectedFormat.downloadUrl,
+      extension: _selectedFormat.extension,
     )
         .then((_) {
       Navigator.of(context).pushReplacement(

@@ -21,6 +21,8 @@ class Download {
   late String? filePath;
   late int? downloadedBytes;
   late int? totalBytes;
+  late double downloadSpeed; // bytes por segundo
+  late int estimatedTimeRemaining; // segundos
 
   Download({
     required this.id,
@@ -35,6 +37,8 @@ class Download {
     this.filePath,
     this.downloadedBytes,
     this.totalBytes,
+    this.downloadSpeed = 0,
+    this.estimatedTimeRemaining = 0,
   }) : startedAt = DateTime.now();
 
   bool get isCompleted => status == DownloadStatus.completed;

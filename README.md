@@ -6,33 +6,20 @@ Una aplicación móvil elegante y ligera para descargar videos de YouTube direct
 
 - 📱 **Interfaz moderna y amigable** - Diseño intuitivo con Material 3
 - 🎬 **Múltiples formatos** - MP4, MKV, WebM, audio solo y más
-- ⚡ **Descarga rápida** - Integración directa con `yt-dlp`
+- ⚡ **Descarga rápida** - Integración con `youtube_explode_dart` para extraer URLs directas
 - 📊 **Seguimiento de progreso** - Visualiza el progreso, velocidad y tiempo estimado
 - 💾 **Almacenamiento inteligente** - Guarda automáticamente en tu dispositivo
 - ⏸️ **Control de descargas** - Pausa, reanuda y cancela descargas
 - 📜 **Historial completo** - Mantén un registro de todas tus descargas
 - 🌙 **Tema oscuro/claro** - Soporta ambos modos de tema
+- 📲 **Compatible con Android e iOS** - Funciona nativamente sin dependencias externas
 
 ## 📋 Requisitos
 
 - Flutter 3.0 o superior
 - Dart 3.0 o superior
-- `yt-dlp` instalado en tu dispositivo
-- `ffmpeg` instalado en tu dispositivo (para conversiones)
 
-### Instalación de dependencias en macOS/Linux
-
-```bash
-# Homebrew (macOS)
-brew install yt-dlp ffmpeg
-
-# Ubuntu/Debian
-sudo apt-get install yt-dlp ffmpeg python3-pip
-pip3 install yt-dlp
-
-# Arch Linux
-sudo pacman -S yt-dlp ffmpeg
-```
+**✅ No requiere yt-dlp ni ffmpeg** - La aplicación funciona directamente en dispositivos móviles usando `youtube_explode_dart` para extraer información y URLs de descarga de YouTube.
 
 ## 🚀 Inicio rápido
 
@@ -70,8 +57,8 @@ lib/
 │   ├── video_model.dart              # Modelo de Video y Format
 │   └── download_model.dart           # Modelo de Download
 ├── services/
-│   ├── youtube_service.dart          # Servicio de YouTube (yt-dlp)
-│   ├── download_service.dart         # Servicio de descargas
+│   ├── youtube_service.dart          # Servicio de YouTube (youtube_explode_dart)
+│   ├── download_service.dart         # Servicio de descargas (Dio HTTP)
 │   └── storage_service.dart          # Servicio de almacenamiento local
 ├── viewmodels/
 │   └── download_viewmodel.dart       # ViewModel con lógica de negocio
@@ -85,6 +72,15 @@ lib/
     └── format_selection_card.dart    # Tarjeta de selección de formato
 ```
 
+## 🔧 Arquitectura
+
+La aplicación **NO requiere yt-dlp ni ffmpeg**. En su lugar, utiliza:
+
+- **`youtube_explode_dart`**: Extrae información del video y URLs de descarga directa de YouTube sin dependencias externas
+- **`Dio`**: Descarga los archivos directamente usando HTTP con seguimiento de progreso en tiempo real
+
+Esto permite que la aplicación funcione **nativamente en Android e iOS** sin necesidad de herramientas de línea de comandos.
+
 ## 🎮 Uso
 
 ### Paso 1: Ingresa una URL
@@ -92,7 +88,7 @@ lib/
 - La URL debe ser válida
 
 ### Paso 2: Selecciona un formato
-- La app mostrará los formatos recomendados
+- La app mostrará los formatos disponibles con información real
 - Puedes ver el tamaño, resolución y características de cada uno
 - Selecciona el que prefieras
 
@@ -109,7 +105,7 @@ Edita el método `_filterRecommendedFormats` en [lib/services/youtube_service.da
 
 ### Cambiar carpeta de descargas
 
-Modifica el método `_getDownloadsDirectory` en [lib/services/download_service.dart](lib/services/download_service.dart).
+Modifica el método `_getOutputDirectory` en [lib/services/download_service.dart](lib/services/download_service.dart).
 
 ## 🧪 Testing
 
