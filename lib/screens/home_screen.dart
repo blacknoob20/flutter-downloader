@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import '../services/youtube_service.dart';
 import '../widgets/dialogs.dart';
+import '../widgets/info_card.dart';
+import '../widgets/banner_card.dart';
 import 'format_selection_screen.dart';
 import 'logs_view_screen.dart';
+import 'download_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -57,6 +60,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
 
     _youtubeService.getVideoInfo(url).then((video) {
+      if (!mounted) return;
       Navigator.pop(context); // Cierra el loading dialog
 
       Navigator.push(
@@ -65,9 +69,11 @@ class _HomeScreenState extends State<HomeScreen> {
           builder: (context) => FormatSelectionScreen(video: video),
         ),
       ).then((_) {
+        if (!mounted) return;
         _urlController.clear();
       });
     }).catchError((error) {
+      if (!mounted) return;
       Navigator.pop(context); // Cierra el loading dialog
 
       showDialog(
@@ -83,12 +89,25 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
     return Scaffold(
       appBar: AppBar(
         title: const Text('Descargador de YouTube'),
         centerTitle: true,
         elevation: 0,
         actions: [
+          IconButton(
+            icon: const Icon(Icons.download_for_offline),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const DownloadScreen()),
+              );
+            },
+            tooltip: 'Ver descargas',
+            visualDensity: VisualDensity.compact,
+          ),
           IconButton(
             icon: const Icon(Icons.description),
             onPressed: () {
@@ -98,6 +117,7 @@ class _HomeScreenState extends State<HomeScreen> {
               );
             },
             tooltip: 'Ver logs',
+            visualDensity: VisualDensity.compact,
           ),
         ],
       ),
@@ -108,41 +128,7 @@ class _HomeScreenState extends State<HomeScreen> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               // Banner
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [Colors.blue[400]!, Colors.blue[600]!],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: const Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Icon(
-                      Icons.play_circle,
-                      color: Colors.white,
-                      size: 40,
-                    ),
-                    SizedBox(height: 12),
-                    Text(
-                      'Descarga tus videos favoritos',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    SizedBox(height: 8),
-                    Text(
-                      'Ligero, rápido y fácil de usar',
-                      style: TextStyle(color: Colors.white70, fontSize: 14),
-                    ),
-                  ],
-                ),
-              ),
+              const BannerCard(),
               const SizedBox(height: 24),
 
               // URL Input
@@ -155,6 +141,10 @@ class _HomeScreenState extends State<HomeScreen> {
                 controller: _urlController,
                 decoration: InputDecoration(
                   hintText: 'https://www.youtube.com/watch?v=...',
+                  hintStyle: TextStyle(
+                    color:
+                        colorScheme.onSurface.withAlpha((0.35 * 255).round()),
+                  ),
                   prefixIcon: const Icon(Icons.link),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(8),
@@ -188,62 +178,25 @@ class _HomeScreenState extends State<HomeScreen> {
               const SizedBox(height: 32),
 
               // Info Cards
-              _buildInfoCard(
+              const InfoCard(
                 icon: Icons.video_library,
                 title: 'Múltiples formatos',
                 description: 'MP4, MKV, WebM y más',
               ),
               const SizedBox(height: 12),
-              _buildInfoCard(
+              const InfoCard(
                 icon: Icons.speed,
                 title: 'Descarga rápida',
                 description: 'Con seguimiento de progreso',
               ),
               const SizedBox(height: 12),
-              _buildInfoCard(
+              const InfoCard(
                 icon: Icons.storage,
                 title: 'Almacenamiento inteligente',
                 description: 'Guarda en tu dispositivo automáticamente',
               ),
             ],
           ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildInfoCard({
-    required IconData icon,
-    required String title,
-    required String description,
-  }) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Row(
-          children: [
-            Icon(icon, color: Colors.blue, size: 32),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 14,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    description,
-                    style: TextStyle(color: Colors.grey[600], fontSize: 12),
-                  ),
-                ],
-              ),
-            ),
-          ],
         ),
       ),
     );
