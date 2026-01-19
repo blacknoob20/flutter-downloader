@@ -4,6 +4,7 @@ import '../models/video_model.dart';
 import '../viewmodels/download_viewmodel.dart';
 import '../widgets/format_selection_card.dart';
 import '../widgets/video_info_card.dart';
+import '../widgets/download_progress_button.dart';
 import 'download_screen.dart';
 
 class FormatSelectionScreen extends StatefulWidget {
@@ -112,19 +113,9 @@ class _FormatSelectionScreenState extends State<FormatSelectionScreen> {
             // Download Button
             Padding(
               padding: const EdgeInsets.all(12),
-              child: SizedBox(
-                width: double.infinity,
-                child: ElevatedButton.icon(
-                  onPressed: _handleDownload,
-                  icon: const Icon(Icons.download),
-                  label: Text('Descargar en ${_selectedFormat.displayName}'),
-                  style: ElevatedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                  ),
-                ),
+              child: DownloadProgressButton(
+                label: 'Descargar en ${_selectedFormat.displayName}',
+                onPressed: _handleDownload,
               ),
             ),
           ],
